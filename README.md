@@ -59,3 +59,18 @@ or
   "too_far?": "False"
 }
 ```
+
+for updated version
+
+```bash
+curl --request GET \
+  --url http://localhost:8080/ \
+  --header 'Content-Type: application/json' \
+  --data '{
+	"prediction":[0.0, 0.0],
+	"cur_position":[0.0101, 0.1001],
+	"recipient":"c2306g2617@bangkit.academy",
+	"username":"user_1",
+	"location":"20.23461, 0.1365786"
+}'
+```
