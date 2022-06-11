@@ -8,9 +8,13 @@ A function for determining if the predicted vs current user position is more tha
 
 ## Reference
 
-By following Google's recommendation of buidling cloud functions development environment [here](https://cloud.google.com/functions/docs/running/overview), and by following the code examples [here](https://cloud.google.com/functions/docs/calling/http#functions-calling-http-nodejs), to act as a basis for the code development environment.
+By following Google's recommendation of building cloud functions development environment [here](https://cloud.google.com/functions/docs/running/overview), and by following the code examples [here](https://cloud.google.com/functions/docs/calling/http#functions-calling-http-nodejs), to act as a basis for the code development environment.
 
 The development environment of this function is initiated by using project wide python's [virtual environment](https://docs.python.org/3/library/venv.html#:~:text=A%20virtual%20environment%20is%20a,part%20of%20your%20operating%20system.), and usage of [pip](https://pypi.org/project/pip/).
+
+## Structure
+
+No definite structure for this repository, you can put anything on the root of the repository.
 
 ## Usage
 
