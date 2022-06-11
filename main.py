@@ -1,8 +1,22 @@
 from flask import jsonify
+
+
+import email.message as msg
+import smtplib
 import numpy as np
+import functions_framework
 
 
 # Constants
+SYSTEM_NAME = "Safe Route Manager"                                                   # NAME
+SYSTEM_EMAIL = "saferoute.manager@yahoo.com"                                         # EMAIL
+SYSTEM_PASSWORD = "CANLQb=tKjgU@NNu^b9kU_xK*DAeWSkJ8Lv#@!+_JjY?cq-Wt&qUhRTbcTh8D7Dw" # EMAIL PASSWORD
+SYSTEM_APP = "mail"                                                                  # APP NAME (YAHOO)
+SYSTEM_APP_PASSWORD = "cczttrfuxupixqii"                                             # APP PASSWORD (FOR YAHOO)
+SYSTEM_EMAIL_SUBJECT = "Abnormal Behavior Detected for User {user_name}"
+SYSTEM_EMAIL_BODY = "Something might happen to {user_name}, please try to contact the person.\nIf the related user is unable to response, it might be a good idea to contact your local authority."
+SYSTEM_EMAIL_NOTE = "\n\nMore information:\n{info}"
+
 max_range = 1000 # in meters
 
 def distance(coordinate_1:tuple[float,float], coordinate_2:tuple[float, float]) -> float:
@@ -38,8 +52,57 @@ def calculate_trigger(
     print(distance(coordinate_1, coordinate_2))
     return distance(coordinate_1, coordinate_2) > max_range
 
-def compute_trigger(request):
-    """Wrapper for functions below"""
+def create_email(recipient_email, username, sender=SYSTEM_EMAIL,
+    subject=SYSTEM_EMAIL_SUBJECT, body=SYSTEM_EMAIL_BODY, note={}) -> msg.EmailMessage:
+    """Create an email with the given receiver and username.
+    kwargs is used to add note such as last_known_location
+    Note:
+    - recipient_email can be in the form of list of string (for multiple recipients)"""
+    message = msg.EmailMessage()
+    message["From"] = sender
+    message["To"] = recipient_email
+    message["Subject"] = subject.format(user_name=username)
+    message_body = body.format(user_name=username)
+    if note:
+        message_body += convert_note(note)
+    message.set_content(message_body)
+    return message
+
+def convert_note(args, note_format=SYSTEM_EMAIL_NOTE) -> str:
+    """Convert args (dictionary) to a note list (string)"""
+    note_list = ""
+    for note_title in args:
+        note_list += f"- {str.title(note_title.replace('_', ' '))} : {args[note_title]}\n"
+    return note_format.format(info=note_list)
+
+def send_email(recipient_email, message:msg.EmailMessage,
+    sender_email=SYSTEM_EMAIL, sender_password=SYSTEM_APP_PASSWORD,
+    log=False):
+    """Send email to the recipient from sender"""
+    mail_server = smtplib.SMTP('smtp.mail.yahoo.com', 587)
+    # Trigger security
+    mail_server.starttls()
+    mail_server.ehlo()
+    mail_server.login(sender_email, sender_password)
+    # Send mail
+    mail_server.send_message(message)
+    # Close connection
+    mail_server.quit()
+    if log:
+        print(f"Email successfully sent to {recipient_email}")
+
+def create_send_email(recipient_email, username,
+    sender_email=SYSTEM_EMAIL, subject=SYSTEM_EMAIL_SUBJECT,
+    body=SYSTEM_EMAIL_BODY, sender_password=SYSTEM_APP_PASSWORD,
+    log=False, **kwargs):
+    """Create and send email function wrapper"""
+    mail = create_email(recipient_email=recipient_email, username=username,
+        sender=sender_email, subject=subject, body=body, note=kwargs)
+    send_email(recipient_email=recipient_email, message=mail,
+        sender_email=sender_email, sender_password=sender_password, log=log)
+
+def trigger_mail(request):
+    """Call calcultate_trigger and send_email"""
 
     content_type = request.headers['content-type']
 
@@ -51,6 +114,13 @@ def compute_trigger(request):
     coordinate_1 = request_json['prediction']
     coordinate_2 = request_json['cur_position']
 
-    result = {"too_far?": str(calculate_trigger(coordinate_1, coordinate_2, max_range))}
+    too_far = bool(calculate_trigger(coordinate_1, coordinate_2, max_range))
 
-    return jsonify(result)
+    recipient_json = request_json['recipient']
+    username_json = request_json['username']
+    last_loc_json = coordinate_2
+    response = "Success"
+
+    if too_far == True:
+        create_send_email(recipient_json, username_json, last_known_location=last_loc_json)
+        return response
